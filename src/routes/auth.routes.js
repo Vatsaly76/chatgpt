@@ -1,20 +1,10 @@
 const express = require('express');
+const authController = require('../controllers/auth.controller');
 const router = express.Router();
 
-router.post('/register', (req, res) => {
-    // Handle user registration
-    const { username, password } = req.body;
+router.post('/register', authController.registerUser);
 
-    // Perform registration logic (e.g., save user to database)
-    res.status(201).json({ message: 'User registered successfully' });
-});
+router.post('/login', authController.loginUser);
 
-router.post('/login', (req, res) => {
-    // Handle user login
-    const { username, password } = req.body;
-
-    // Perform login logic (e.g., check credentials)
-    res.status(200).json({ message: 'User logged in successfully' });
-});
 
 module.exports = router;
