@@ -3,6 +3,8 @@ const cookie = require("cookie");
 const jwt = require("jsonwebtoken");
 const userModel = require("../models/user.model");
 const aiService = require("../services/ai.services");
+const MessageModel = require("../models/message.model");
+const ChatModel = require("../models/chat.model");
 
 function initSocketServer(httpServer) {
     const io = new Server(httpServer);
@@ -27,12 +29,42 @@ function initSocketServer(httpServer) {
     io.on("connection", (socket) => {
         console.log("New client connected");
 
-        socket.on("ai-message", async (messages) => {
-            const response = await aiService.generateAIResponse(messages.content);
-            console.log("Received AI message:", messages);
-            socket.emit("ai-response", { content: response, chatId: messages.chatId });
+        socket.on("ai-message", async (message) => {
+            let chatId = message.chatId;
+
+            if (!chatId) {
+                const newChat = await ChatModel.create({ user: socket.userId, title: message.content.substring(0, 20) });
+                chatId = newChat._id;
+            }
+
+            await MessageModel.create({
+                user: socket.userId,
+                chat: chatId,
+                content: message.content,
+                role: 'user'
+            });
+
+            const chatHistory = await MessageModel.find({
+                chat: message.chatId
+            })
+
+            console.log("Chat history:", chatHistory);
+
+            const aiResponse = await aiService.generateAIResponse(message.content);
+
+            await MessageModel.create({
+                user: socket.userId,
+                chat: chatId,
+                content: aiResponse,
+                role: 'model'
+            });
+
+            console.log("Received AI message:", message);
+            socket.emit("ai-response", { content: aiResponse, chatId: chatId });
         });
     });
+
+    return io;
 }
 
 module.exports = initSocketServer;
