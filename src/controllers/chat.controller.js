@@ -1,16 +1,17 @@
 const chatModel = require('../models/chat.model');
 
 async function createChat(req, res) {
-    const { message } = req.body;
+    const { title } = req.body;
     const userId = req.user.id;
 
     try {
         const newChat = await chatModel.create({ 
-            userId: userId,
-            message: message
+            user: userId,
+            title: title
         });
         res.status(201).json({ message: "Chat created successfully", chat: newChat });
     } catch (error) {
+        console.log(error); // It's a good practice to log the actual error
         res.status(500).json({ error: "Failed to create chat" });
     }
 }

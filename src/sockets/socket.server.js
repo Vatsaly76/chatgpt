@@ -4,7 +4,7 @@ const jwt = require("jsonwebtoken");
 const userModel = require("../models/user.model");
 const aiService = require("../services/ai.services");
 const MessageModel = require("../models/message.model");
-const ChatModel = require("../models/chat.model");
+const chatmodel = require("../models/chat.model");
 
 function initSocketServer(httpServer) {
     const io = new Server(httpServer);
@@ -30,37 +30,36 @@ function initSocketServer(httpServer) {
         console.log("New client connected");
 
         socket.on("ai-message", async (message) => {
-            let chatId = message.chatId;
-
-            if (!chatId) {
-                const newChat = await ChatModel.create({ user: socket.userId, title: message.content.substring(0, 20) });
-                chatId = newChat._id;
-            }
 
             await MessageModel.create({
+                chat: message.chat,
                 user: socket.userId,
-                chat: chatId,
                 content: message.content,
                 role: 'user'
             });
 
             const chatHistory = await MessageModel.find({
-                chat: message.chatId
-            })
+                chat: message.chat
+            }).sort({ createdAt: -1 }).limit(10).lean().reverse();
 
-            console.log("Chat history:", chatHistory);
-
-            const aiResponse = await aiService.generateAIResponse(message.content);
+            const aiResponse = await aiService.generateAIResponse(chatHistory.map(item => {
+                return {
+                    role: item.role,
+                    parts: [ { text: item.content } ]
+                }
+            }));
 
             await MessageModel.create({
+                chat: message.chat,
                 user: socket.userId,
-                chat: chatId,
                 content: aiResponse,
-                role: 'model'
+                role: 'model' 
             });
 
-            console.log("Received AI message:", message);
-            socket.emit("ai-response", { content: aiResponse, chatId: chatId });
+            socket.emit("ai-response", {
+                content: aiResponse,
+                chat: message.chat
+            });
         });
     });
 
