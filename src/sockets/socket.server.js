@@ -4,7 +4,7 @@ const jwt = require("jsonwebtoken");
 const userModel = require("../models/user.model");
 const aiService = require("../services/ai.services");
 const MessageModel = require("../models/message.model");
-const chatmodel = require("../models/chat.model");
+const { createMemory,queryMemory } = require("../services/vector.service");
 
 function initSocketServer(httpServer) {
     const io = new Server(httpServer);
@@ -31,16 +31,27 @@ function initSocketServer(httpServer) {
 
         socket.on("ai-message", async (message) => {
 
-            await MessageModel.create({
-                chat: message.chat,
-                user: socket.userId,
-                content: message.content,
-                role: 'user'
-            });
+            // await MessageModel.create({
+            //     chat: message.chat,
+            //     user: socket.userId,
+            //     content: message.content,
+            //     role: 'user'
+            // });
+
+            // await createMemory({
+            //     vectors: [message.content],
+            //     metadata: {
+            //         userId: socket.userId,
+            //         chatId: message.chat
+            //     }
+            // });
+
+            const vectors = await aiService.generateVector(message.content);
+            console.log("vectors", vectors);
 
             const chatHistory = await MessageModel.find({
                 chat: message.chat
-            }).sort({ createdAt: -1 }).limit(10).lean().reverse();
+            }).sort({ createdAt: 1 });
 
             const aiResponse = await aiService.generateAIResponse(chatHistory.map(item => {
                 return {
@@ -49,12 +60,12 @@ function initSocketServer(httpServer) {
                 }
             }));
 
-            await MessageModel.create({
-                chat: message.chat,
-                user: socket.userId,
-                content: aiResponse,
-                role: 'model' 
-            });
+            // await MessageModel.create({
+            //     chat: message.chat,
+            //     user: socket.userId,
+            //     content: aiResponse,
+            //     role: 'model' 
+            // });
 
             socket.emit("ai-response", {
                 content: aiResponse,
