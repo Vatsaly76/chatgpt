@@ -8,17 +8,20 @@ const pc = new Pinecone({ apiKey: process.env.PINECONE_API_KEY });
 
 const vectorChatGPTIndex = pc.Index('vector-chatgpt');
 
-async function createMemory({vectors, metadata}) {
-  await vectorChatGPTIndex.upsert([ {
-    id: metadata.id,
+async function createMemory({vectors, metadata, messageId}) {
+  if (!messageId) {
+    throw new Error('A messageId must be provided to create a memory.');
+  }
+  await vectorChatGPTIndex.upsert([{
+    id: messageId,
     values: vectors,
-    metadata: metadata
-  } ])
+    metadata
+  }]);
 }
 async function queryMemory({queryVector, limit = 5, metadata}) {
   const data = await vectorChatGPTIndex.query({
     vector: queryVector,
-    top_k: limit,
+    topK: limit,
     filter: metadata ? { metadata } : undefined,
     includeMetadata: true
   });
