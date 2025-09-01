@@ -57,19 +57,34 @@ function initSocketServer(httpServer) {
                 metadata:{}
             });
 
-            console.log("Memory:", memory);
+            // console.log("Memory:", memory);
 
             const chatHistory = await MessageModel.find({
                 chat: message.chat
             }).sort({ createdAt: 1 });
 
-            const aiResponse = await aiService.generateAIResponse(chatHistory.map(item => {
+            const stm = chatHistory.map(item => {
                 return {
                     role: item.role,
                     parts: [ { text: item.content } ]
                 }
-            }));
+            });
 
+            const ltm = [
+                {
+                    role: 'user',
+                    parts: [ {
+                        text: `Here is some relevant information from the chat history that might be useful for your next response: 
+                        ${memory.map(item => item.metadata.text).join("\n")}`
+                    } ]
+                }
+            ]
+
+            console.log(ltm[0]);
+            console.log(stm);
+
+            const aiResponse = await aiService.generateAIResponse([...ltm, ...stm]);
+            
             const aiMessage = await MessageModel.create({
                 chat: message.chat,
                 user: socket.userId,
@@ -82,8 +97,8 @@ function initSocketServer(httpServer) {
                 vectors: responsevector,
                 messageId: aiMessage._id.toString(),
                 metadata: {
-                    user: socket.userId,
                     chat: message.chat,
+                    user: socket.userId,
                     text: aiResponse
                 }
             });
