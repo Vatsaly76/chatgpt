@@ -31,7 +31,8 @@ function initSocketServer(httpServer) {
         console.log("New client connected");
 
         socket.on("ai-message", async (message) => {
-
+            
+            /*
             const userMessage = await MessageModel.create({
                 chat: message.chat,
                 user: socket.userId,
@@ -40,28 +41,50 @@ function initSocketServer(httpServer) {
             });
 
             const vectors = await aiService.generateVector(message.content);
-            
-            await createMemory({
-                messageId: userMessage._id.toString(),
-                vectors: vectors,
-                metadata: {
+            */
+
+            const [userMessage, vectors] = await Promise.all([
+                MessageModel.create({
                     chat: message.chat,
                     user: socket.userId,
-                    text: message.content
-                }
-            });
+                    content: message.content,
+                    role: 'user'
+                }),
+                aiService.generateVector(message.content),
+                createMemory({
+                    messageId: userMessage._id.toString(),
+                    vectors: vectors,
+                    metadata: {
+                        chat: message.chat,
+                        user: socket.userId,
+                        text: message.content
+                    }
+                })
+            ]);
 
-            const memory = await queryMemory({
-                queryVector: vectors,
-                topK: 3,
-                metadata:{}
-            });
+            // const memory = await queryMemory({
+            //     queryVector: vectors,
+            //     topK: 3,
+            //     metadata:{}
+            // });
 
-            // console.log("Memory:", memory);
+            // // console.log("Memory:", memory);
 
-            const chatHistory = await MessageModel.find({
-                chat: message.chat
-            }).sort({ createdAt: 1 });
+            
+            // const chatHistory = await MessageModel.find({
+            //     chat: message.chat
+            // }).sort({ createdAt: 1 });
+
+            const [memory, chatHistory] = await Promise.all([
+                queryMemory({
+                    queryVector: vectors,
+                    topK: 3,
+                    metadata: {}
+                }),
+                MessageModel.find({
+                    chat: message.chat
+                }).sort({ createdAt: 1 })
+            ]);
 
             const stm = chatHistory.map(item => {
                 return {
@@ -78,21 +101,29 @@ function initSocketServer(httpServer) {
                         ${memory.map(item => item.metadata.text).join("\n")}`
                     } ]
                 }
-            ]
-
-            console.log(ltm[0]);
-            console.log(stm);
+            ];
 
             const aiResponse = await aiService.generateAIResponse([...ltm, ...stm]);
             
-            const aiMessage = await MessageModel.create({
-                chat: message.chat,
-                user: socket.userId,
-                content: aiResponse,
-                role: 'model' 
-            });
+            // const aiMessage = await MessageModel.create({
+            //     chat: message.chat,
+            //     user: socket.userId,
+            //     content: aiResponse,
+            //     role: 'model' 
+            // });
 
-            const responsevector =  await aiService.generateVector(aiResponse);
+            // const responsevector =  await aiService.generateVector(aiResponse);
+
+            const [aiMessage, responsevector] = await Promise.all([
+                MessageModel.create({
+                    chat: message.chat,
+                    user: socket.userId,
+                    content: aiResponse,
+                    role: 'model'
+                }),
+                aiService.generateVector(aiResponse)
+            ]);
+
             await createMemory({
                 vectors: responsevector,
                 messageId: aiMessage._id.toString(),
