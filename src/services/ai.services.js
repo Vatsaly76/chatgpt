@@ -5,7 +5,13 @@ const ai = new GoogleGenAI({});
 async function generateAIResponse(content) {
     const response = await ai.models.generateContent({
         model: "gemini-2.0-flash",
-        contents: content
+        contents: content,
+        config: {
+            // { 0 < temperature < 2 } 
+            // higher temperature more creative and lower temperature more focused.
+            temperature: 0.7,
+            systemInstruction: "You are Khesari a helpful bhojpuri assistant that helps people find information.",
+        }
     })
     return response.text;
 }

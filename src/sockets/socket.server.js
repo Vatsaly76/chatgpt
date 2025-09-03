@@ -4,7 +4,7 @@ const jwt = require("jsonwebtoken");
 const userModel = require("../models/user.model");
 const aiService = require("../services/ai.services");
 const MessageModel = require("../models/message.model");
-const { createMemory,queryMemory } = require("../services/vector.service");
+const { createMemory, queryMemory } = require("../services/vector.service");
 const { text } = require("express");
 
 function initSocketServer(httpServer) {
@@ -31,17 +31,6 @@ function initSocketServer(httpServer) {
         console.log("New client connected");
 
         socket.on("ai-message", async (message) => {
-            
-            /*
-            const userMessage = await MessageModel.create({
-                chat: message.chat,
-                user: socket.userId,
-                content: message.content,
-                role: 'user'
-            });
-
-            const vectors = await aiService.generateVector(message.content);
-            */
 
             const [userMessage, vectors] = await Promise.all([
                 MessageModel.create({
@@ -51,29 +40,17 @@ function initSocketServer(httpServer) {
                     role: 'user'
                 }),
                 aiService.generateVector(message.content),
-                createMemory({
-                    messageId: userMessage._id.toString(),
-                    vectors: vectors,
-                    metadata: {
-                        chat: message.chat,
-                        user: socket.userId,
-                        text: message.content
-                    }
-                })
             ]);
 
-            // const memory = await queryMemory({
-            //     queryVector: vectors,
-            //     topK: 3,
-            //     metadata:{}
-            // });
-
-            // // console.log("Memory:", memory);
-
-            
-            // const chatHistory = await MessageModel.find({
-            //     chat: message.chat
-            // }).sort({ createdAt: 1 });
+            await createMemory({
+                messageId: userMessage._id.toString(),
+                vectors: vectors,
+                metadata: {
+                    chat: message.chat,
+                    user: socket.userId,
+                    text: message.content
+                }
+            });
 
             const [memory, chatHistory] = await Promise.all([
                 queryMemory({
@@ -89,30 +66,26 @@ function initSocketServer(httpServer) {
             const stm = chatHistory.map(item => {
                 return {
                     role: item.role,
-                    parts: [ { text: item.content } ]
+                    parts: [{ text: item.content }]
                 }
             });
 
             const ltm = [
                 {
                     role: 'user',
-                    parts: [ {
+                    parts: [{
                         text: `Here is some relevant information from the chat history that might be useful for your next response: 
                         ${memory.map(item => item.metadata.text).join("\n")}`
-                    } ]
+                    }]
                 }
             ];
 
             const aiResponse = await aiService.generateAIResponse([...ltm, ...stm]);
-            
-            // const aiMessage = await MessageModel.create({
-            //     chat: message.chat,
-            //     user: socket.userId,
-            //     content: aiResponse,
-            //     role: 'model' 
-            // });
 
-            // const responsevector =  await aiService.generateVector(aiResponse);
+            socket.emit("ai-response", {
+                content: aiResponse,
+                chat: message.chat
+            });
 
             const [aiMessage, responsevector] = await Promise.all([
                 MessageModel.create({
@@ -132,11 +105,6 @@ function initSocketServer(httpServer) {
                     user: socket.userId,
                     text: aiResponse
                 }
-            });
-
-            socket.emit("ai-response", {
-                content: aiResponse,
-                chat: message.chat
             });
         });
     });
