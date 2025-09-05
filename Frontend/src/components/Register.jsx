@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { useTheme } from '../contexts/ThemeContext';
 import '../styles/theme.css';
 import '../styles/auth.css';
 
 const Register = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: '',
     firstName: '',
@@ -16,16 +18,29 @@ const Register = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prevState => ({
-      ...prevState,
-      [name]: value
-    }));
+    setFormData({ ...formData, [name]: value });
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     // Handle registration logic here
-    console.log('Registration data:', formData);
+    axios.post('http://localhost:5000/auth/register', {
+        fullName: {
+            firstName: formData.firstName,
+            lastName: formData.lastName
+        },
+        email: formData.email,
+        password: formData.password
+    })
+    .then(response => {
+        console.log('Registration successful:', response.data);
+        // Redirect to login page or show success message
+        navigate('/');
+    })
+    .catch(error => {
+        console.error('Registration error:', error);
+        // Show error message to user
+    });
   };
 
   return (
