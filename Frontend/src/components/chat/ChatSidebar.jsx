@@ -40,9 +40,9 @@ const ChatSidebar = ({ chats, currentChatId, onSelectChat, onNewChat, isSidebarO
       <div className="chat-sidebar__footer">
         <div className="user-profile">
           <div className="user-profile__avatar">
-            <span>{user?.name?.[0]?.toUpperCase() || 'U'}</span>
+            <span>{user?.fullName?.firstName?.[0]?.toUpperCase() || 'U'}</span>
           </div>
-          <span className="user-profile__name">{user?.name || 'User'}</span>
+          <span className="user-profile__name">{user?.fullName?.firstName || 'User'}</span>
         </div>
         <span className="user-profile__plan">Free</span>
       </div>

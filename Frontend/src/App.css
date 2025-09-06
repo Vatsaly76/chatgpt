@@ -10,3 +10,11 @@ body{
   width: 100%;
   font-family: Arial, sans-serif;
 }
+
+.chat-window__empty {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  text-align: center;
+}

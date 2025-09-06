@@ -32,7 +32,7 @@ const Register = () => {
     .then(response => {
         console.log('Registration successful:', response.data);
         // Redirect to login page or show success message
-        navigate('/');
+        navigate('/login');
     })
     .catch(error => {
         console.error('Registration error:', error);
