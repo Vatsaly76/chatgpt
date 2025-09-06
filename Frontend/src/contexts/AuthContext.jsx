@@ -1,8 +1,9 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useEffect } from 'react';
 
-const AuthContext = createContext(null);
+// eslint-disable-next-line react-refresh/only-export-components
+export const AuthContext = createContext(null);
 
-export const AuthProvider = ({ children }) => {
+const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
@@ -35,6 +36,4 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-export const useAuth = () => {
-  return useContext(AuthContext);
-};
+export default AuthProvider;

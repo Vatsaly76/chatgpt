@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { useAuth } from '../contexts/AuthContext';
+import { AuthContext } from '../contexts/AuthContext';
 import '../styles/theme.css';
 import '../styles/auth.css';
 
 const Login = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login } = useContext(AuthContext);
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -20,6 +20,7 @@ const Login = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    // Handle login logic here
     axios.post('http://localhost:5000/auth/login', {
         email: formData.email,
         password: formData.password      

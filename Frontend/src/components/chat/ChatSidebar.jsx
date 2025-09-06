@@ -2,10 +2,11 @@ import React from 'react';
 import { VscNewFile } from 'react-icons/vsc';
 import { FiSidebar } from 'react-icons/fi';
 import { TbHexagon } from 'react-icons/tb';
-import { useAuth } from '../../contexts/AuthContext';
+import { AuthContext } from '../../contexts/AuthContext';
+import { useContext } from 'react';
 
 const ChatSidebar = ({ chats, currentChatId, onSelectChat, onNewChat, isSidebarOpen, onToggleSidebar }) => {
-  const { user } = useAuth();
+  const { user } = useContext(AuthContext);
 
   return (
     <aside className={`chat-sidebar ${isSidebarOpen ? 'open' : 'closed'}`} aria-label="Chat history sidebar">

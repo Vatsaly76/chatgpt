@@ -14,7 +14,7 @@ const ChatWindow = ({ messages }) => {
       <div className="chat-window-content" ref={scrollRef} aria-live="polite">
         {messages.length === 0 ? (
           <div className="chat-window__empty">
-            <h1>How can I help, vatsaly?</h1>
+            <h1>How can I help, User name?</h1>
           </div>
         ) : (
           messages.map((m) => <ChatMessage key={m.id} message={m} />)
