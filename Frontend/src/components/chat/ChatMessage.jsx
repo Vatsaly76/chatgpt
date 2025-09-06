@@ -2,15 +2,22 @@ import React from 'react';
 
 const ChatMessage = ({ message }) => {
   const isUser = message.role === 'user';
+
+  const formatTime = (ts) => {
+    if (!ts) return '';
+    return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
   return (
-    <div className={`message ${isUser ? 'message--user' : 'message--ai'}`}>
-      <div className="message__bubble">
-        {!isUser && <span className="message__avatar" aria-hidden>🤖</span>}
-        <p className="message__text">{message.content}</p>
+    <div className={`message-wrapper message-wrapper--${isUser ? 'user' : 'ai'}`}>
+      <div className={`message message--${isUser ? 'user' : 'ai'}`}>
+        <div className="message__content">
+          <div className="message__bubble">
+            <p className="message__text">{message.content}</p>
+          </div>
+          <time className="message__time">{formatTime(message.timestamp)}</time>
+        </div>
       </div>
-      <span className="message__time" aria-label="timestamp">
-        {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-      </span>
     </div>
   );
 };

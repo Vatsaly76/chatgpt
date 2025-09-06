@@ -1,11 +1,26 @@
 import React from 'react';
+import { VscNewFile } from 'react-icons/vsc';
+import { FiSidebar } from 'react-icons/fi';
+import { TbHexagon } from 'react-icons/tb';
+import { useAuth } from '../../contexts/AuthContext';
 
-const ChatSidebar = ({ chats, currentChatId, onSelectChat, onNewChat }) => {
+const ChatSidebar = ({ chats, currentChatId, onSelectChat, onNewChat, isSidebarOpen, onToggleSidebar }) => {
+  const { user } = useAuth();
+
   return (
-    <aside className="chat-sidebar" aria-label="Chat history sidebar">
+    <aside className={`chat-sidebar ${isSidebarOpen ? 'open' : 'closed'}`} aria-label="Chat history sidebar">
       <div className="chat-sidebar__header">
-        <h2 className="chat-sidebar__title">Chats</h2>
-        <button className="chat-sidebar__new" onClick={onNewChat} aria-label="Start new chat">+ New</button>
+        <div className="chat-sidebar__title-container">
+          <TbHexagon size={28} />
+        </div>
+        <div className="chat-sidebar__actions">
+          <button className="chat-sidebar__new" onClick={onNewChat} aria-label="Start new chat">
+            <VscNewFile size={20} />
+          </button>
+          <button className="chat-sidebar__toggle" onClick={onToggleSidebar} aria-label="Toggle sidebar">
+            <FiSidebar size={20} />
+          </button>
+        </div>
       </div>
       <ul className="chat-sidebar__list">
         {chats.length === 0 && <li className="chat-sidebar__empty">No previous chats</li>}
@@ -17,11 +32,19 @@ const ChatSidebar = ({ chats, currentChatId, onSelectChat, onNewChat }) => {
               title={c.title}
             >
               <span className="chat-sidebar__item-title">{c.title}</span>
-              <span className="chat-sidebar__item-time">{new Date(c.updatedAt).toLocaleDateString()}</span>
             </button>
           </li>
         ))}
       </ul>
+      <div className="chat-sidebar__footer">
+        <div className="user-profile">
+          <div className="user-profile__avatar">
+            <span>{user?.name?.[0]?.toUpperCase() || 'U'}</span>
+          </div>
+          <span className="user-profile__name">{user?.name || 'User'}</span>
+        </div>
+        <span className="user-profile__plan">Free</span>
+      </div>
     </aside>
   );
 };

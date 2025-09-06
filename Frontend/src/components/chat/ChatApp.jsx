@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { FiSidebar } from 'react-icons/fi';
 import ChatSidebar from './ChatSidebar';
 import ChatWindow from './ChatWindow';
 import ChatInput from './ChatInput';
@@ -44,12 +45,17 @@ const initialChats = [
 const ChatApp = () => {
   // State variables as requested
   const [previousChats, setPreviousChats] = useState(initialChats); // stores previous chats
-  const [messages, setMessages] = useState(initialChats[0]?.messages || []); // current chat messages
+  const [messages, setMessages] = useState([]); // current chat messages
   const [input, setInput] = useState(''); // user input
 
   // Additional internal state
-  const [currentChatId, setCurrentChatId] = useState(initialChats[0]?.id || null);
+  const [currentChatId, setCurrentChatId] = useState(null);
   const [isSending, setIsSending] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
 
   const updateChat = (chatId, updater) => {
     setPreviousChats((prev) => prev.map((c) => (c.id === chatId ? updater(c) : c)));
@@ -113,17 +119,23 @@ const ChatApp = () => {
   };
 
   return (
-    <div className="chat-layout">
-      {/* Sidebar is hidden on small screens via CSS */}
+    <div className={`chat-layout ${isSidebarOpen ? 'sidebar-open' : ''}`}>
       <ChatSidebar
         chats={previousChats}
         currentChatId={currentChatId}
         onSelectChat={handleSelectChat}
         onNewChat={handleNewChat}
+        isSidebarOpen={isSidebarOpen}
+        onToggleSidebar={toggleSidebar}
       />
 
       <main className="chat-main" role="main">
-  <ChatWindow messages={messages} />
+        {!isSidebarOpen && (
+          <button className="sidebar-open-button" onClick={toggleSidebar} aria-label="Open sidebar">
+            <FiSidebar size={20} />
+          </button>
+        )}
+        <ChatWindow messages={messages} />
         <ChatInput input={input} setInput={setInput} onSend={handleSend} isSending={isSending} />
       </main>
     </div>
