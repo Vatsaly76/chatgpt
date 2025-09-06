@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useTheme } from '../../contexts/ThemeContext';
 import ChatSidebar from './ChatSidebar';
 import ChatWindow from './ChatWindow';
 import ChatInput from './ChatInput';
@@ -43,7 +42,6 @@ const initialChats = [
 ];
 
 const ChatApp = () => {
-  const { theme, toggleTheme } = useTheme();
   // State variables as requested
   const [previousChats, setPreviousChats] = useState(initialChats); // stores previous chats
   const [messages, setMessages] = useState(initialChats[0]?.messages || []); // current chat messages
@@ -116,10 +114,6 @@ const ChatApp = () => {
 
   return (
     <div className="chat-layout">
-      <button className="theme-toggle" onClick={toggleTheme} aria-label="Toggle theme">
-        <span className="theme-toggle-icon">{theme === 'light' ? '🌙' : '☀️'}</span>
-      </button>
-
       {/* Sidebar is hidden on small screens via CSS */}
       <ChatSidebar
         chats={previousChats}

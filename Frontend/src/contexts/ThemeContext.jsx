@@ -12,20 +12,9 @@ export const useTheme = () => {
 
 const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState(() => {
-    // Check if user has a saved theme preference
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme) {
-      return savedTheme;
-    }
-    // Otherwise use system preference
+    // Use system preference
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   });
-
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
-  };
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -35,9 +24,7 @@ const ThemeProvider = ({ children }) => {
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handleChange = (e) => {
-      if (!localStorage.getItem('theme')) {
-        setTheme(e.matches ? 'dark' : 'light');
-      }
+      setTheme(e.matches ? 'dark' : 'light');
     };
 
     mediaQuery.addEventListener('change', handleChange);
@@ -46,7 +33,6 @@ const ThemeProvider = ({ children }) => {
 
   const value = {
     theme,
-    toggleTheme,
     isDark: theme === 'dark'
   };
 

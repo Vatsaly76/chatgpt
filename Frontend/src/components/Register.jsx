@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { useTheme } from '../contexts/ThemeContext';
 import '../styles/theme.css';
 import '../styles/auth.css';
 
@@ -13,8 +12,6 @@ const Register = () => {
     lastName: '',
     password: ''
   });
-
-  const { theme, toggleTheme } = useTheme();
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -45,16 +42,6 @@ const Register = () => {
 
   return (
     <div className="auth-container">
-      <button 
-        className="theme-toggle" 
-        onClick={toggleTheme}
-        aria-label="Toggle theme"
-      >
-        <span className="theme-toggle-icon">
-          {theme === 'light' ? '🌙' : '☀️'}
-        </span>
-      </button>
-
       <div className="auth-card">
         <div className="auth-header">
           <h1 className="auth-title">Create Account</h1>
