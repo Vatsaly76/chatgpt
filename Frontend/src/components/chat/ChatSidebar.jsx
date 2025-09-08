@@ -26,10 +26,10 @@ const ChatSidebar = ({ chats, currentChatId, onSelectChat, onNewChat, isSidebarO
       <ul className="chat-sidebar__list">
         {chats.length === 0 && <li className="chat-sidebar__empty">No previous chats</li>}
         {chats.map((c) => (
-          <li key={c.id}>
+          <li key={c._id}>
             <button
-              className={`chat-sidebar__item ${currentChatId === c.id ? 'is-active' : ''}`}
-              onClick={() => onSelectChat(c.id)}
+              className={`chat-sidebar__item ${currentChatId === c._id ? 'is-active' : ''}`}
+              onClick={() => onSelectChat(c._id)}
               title={c.title}
             >
               <span className="chat-sidebar__item-title">{c.title}</span>

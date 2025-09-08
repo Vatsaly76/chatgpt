@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { FiSidebar } from 'react-icons/fi';
 import ChatSidebar from './ChatSidebar';
 import ChatWindow from './ChatWindow';
 import ChatInput from './ChatInput';
+import { AuthContext } from '../../contexts/AuthContext';
 
 // Simulated AI response function
 const fetchAIResponse = async (message) => {
@@ -20,105 +21,121 @@ const fetchAIResponse = async (message) => {
 
 const createId = () => Math.random().toString(36).slice(2);
 
-// Example dummy chat history
-const initialChats = [
-  {
-    id: createId(),
-    title: 'Getting Started',
-    updatedAt: Date.now() - 1000 * 60 * 60 * 12,
-    messages: [
-      { id: createId(), role: 'ai', content: 'Hi! I\'m your assistant. How can I help today?', timestamp: Date.now() - 1000 * 60 * 60 * 12 },
-      { id: createId(), role: 'user', content: 'Show me how this works.', timestamp: Date.now() - 1000 * 60 * 60 * 12 + 10000 },
-      { id: createId(), role: 'ai', content: 'Just type a message below and press Send.', timestamp: Date.now() - 1000 * 60 * 60 * 12 + 20000 },
-    ],
-  },
-  {
-    id: createId(),
-    title: 'Design Ideas',
-    updatedAt: Date.now() - 1000 * 60 * 60 * 24,
-    messages: [
-      { id: createId(), role: 'user', content: 'Suggest a color palette for a modern app.', timestamp: Date.now() - 1000 * 60 * 60 * 24 },
-      { id: createId(), role: 'ai', content: 'Try blue-gray with vibrant accents like teal or coral.', timestamp: Date.now() - 1000 * 60 * 60 * 24 + 15000 },
-    ],
-  },
-];
-
 const ChatApp = () => {
   // State variables as requested
-  const [previousChats, setPreviousChats] = useState(initialChats); // stores previous chats
+  const [previousChats, setPreviousChats] = useState([]); // stores previous chats
   const [messages, setMessages] = useState([]); // current chat messages
   const [input, setInput] = useState(''); // user input
+  const { user } = useContext(AuthContext);
 
   // Additional internal state
   const [currentChatId, setCurrentChatId] = useState(null);
   const [isSending, setIsSending] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
+  useEffect(() => {
+    const getChats = async () => {
+      try {
+        const response = await axios.get("http://localhost:5000/chat", { withCredentials: true });
+        const sortedChats = response.data.chats.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+        setPreviousChats(sortedChats);
+      } catch (error) {
+        console.error("Failed to fetch chats", error);
+      }
+    };
+    if (user) {
+      getChats();
+    }
+  }, [user]);
+
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
   const updateChat = (chatId, updater) => {
-    setPreviousChats((prev) => prev.map((c) => (c.id === chatId ? updater(c) : c)));
+    setPreviousChats((prev) => prev.map((c) => (c._id === chatId ? updater(c) : c)));
   };
 
   const handleNewChat = async () => {
-    const id = createId();
-    const newChat = { id, title: 'New Chat', updatedAt: Date.now(), messages: [] };
-    setPreviousChats((prev) => [newChat, ...prev]);
-    setCurrentChatId(id);
-    setMessages([]);
-    const response = await axios.post("http://localhost:5000/chat", {
-      title: newChat.title,
-    }, { withCredentials: true });
+    try {
+      const response = await axios.post("http://localhost:5000/chat", {
+        title: "New Chat",
+      }, { withCredentials: true });
 
-    console.log(response.data);
+      const newChat = response.data.chat;
+      setPreviousChats((prev) => [newChat, ...prev]);
+      setCurrentChatId(newChat._id);
+      setMessages([]);
+    } catch (error) {
+      console.error("Failed to create new chat", error);
+    }
   };
 
   const handleSelectChat = (id) => {
     setCurrentChatId(id);
-    const chat = previousChats.find((c) => c.id === id);
-    setMessages(chat ? chat.messages : []);
+    const chat = previousChats.find((c) => c._id === id);
+    setMessages(chat?.messages || []);
   };
 
   const handleSend = async (text) => {
     let chatId = currentChatId;
     if (!chatId) {
-      // create a new chat synchronously
-      chatId = createId();
-      const newChat = { id: chatId, title: 'New Chat', updatedAt: Date.now(), messages: [] };
-      setPreviousChats((prev) => [newChat, ...prev]);
-      setCurrentChatId(chatId);
-      setMessages([]);
+      try {
+        const response = await axios.post("http://localhost:5000/chat", {
+          title: text.slice(0, 30) || "New Chat",
+        }, { withCredentials: true });
+        
+        const newChat = response.data.chat;
+        setPreviousChats((prev) => [newChat, ...prev]);
+        chatId = newChat._id;
+        setCurrentChatId(newChat._id);
+        setMessages([]);
+      } catch (error) {
+        console.error("Failed to create new chat", error);
+        return;
+      }
     }
 
-    const userMsg = { id: createId(), role: 'user', content: text, timestamp: Date.now() };
+    const userMsg = { role: 'user', content: text, timestamp: new Date() };
 
     // update local messages state (for current chat view)
     setMessages((prev) => [...prev, userMsg]);
 
     // update the corresponding chat in history
-    updateChat(chatId, (c) => ({
-      ...c,
-      title: c.messages.length === 0 ? text.slice(0, 30) || 'New Chat' : c.title,
-      updatedAt: Date.now(),
-      messages: [...c.messages, userMsg],
-    }));
+    updateChat(chatId, (c) => {
+      const newTitle = (c.messages || []).length === 0 ? text.slice(0, 30) || 'New Chat' : c.title;
+      if (newTitle !== c.title) {
+        axios.put(`http://localhost:5000/chat/${chatId}`, { title: newTitle }, { withCredentials: true });
+      }
+      return {
+        ...c,
+        title: newTitle,
+        updatedAt: Date.now(),
+        messages: [...(c.messages || []), userMsg],
+      };
+    });
 
     setInput('');
-
     setIsSending(true);
+
     try {
+      // Save user message to backend
+      await axios.post(`http://localhost:5000/chat/${chatId}/messages`, userMsg, { withCredentials: true });
+
       const aiText = await fetchAIResponse(text);
-      const aiMsg = { id: createId(), role: 'ai', content: aiText, timestamp: Date.now() };
+      const aiMsg = { role: 'ai', content: aiText, timestamp: new Date() };
+
+      // Save AI message to backend
+      await axios.post(`http://localhost:5000/chat/${chatId}/messages`, aiMsg, { withCredentials: true });
 
       // reflect in both states
       setMessages((prev) => [...prev, aiMsg]);
-      updateChat(chatId, (c) => ({ ...c, updatedAt: Date.now(), messages: [...c.messages, aiMsg] }));
-    } catch {
+      updateChat(chatId, (c) => ({ ...c, updatedAt: Date.now(), messages: [...(c.messages || []), aiMsg] }));
+    } catch (error) {
+      console.error("Failed to send message", error);
       const aiMsg = { id: createId(), role: 'ai', content: 'Sorry, something went wrong.', timestamp: Date.now() };
       setMessages((prev) => [...prev, aiMsg]);
-      updateChat(chatId, (c) => ({ ...c, updatedAt: Date.now(), messages: [...c.messages, aiMsg] }));
+      updateChat(chatId, (c) => ({ ...c, updatedAt: Date.now(), messages: [...(c.messages || []), aiMsg] }));
     } finally {
       setIsSending(false);
     }

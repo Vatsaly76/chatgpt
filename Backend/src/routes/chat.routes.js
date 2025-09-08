@@ -11,4 +11,10 @@ router.post("/", authMiddleware.authUser, chatController.createChat);
 // Get all chats
 router.get("/", authMiddleware.authUser, chatController.getChats);
 
+// Add a message to a chat
+router.post("/:chatId/messages", authMiddleware.authUser, chatController.addMessage);
+
+// Update a chat
+router.put("/:chatId", authMiddleware.authUser, chatController.updateChat);
+
 module.exports = router;
