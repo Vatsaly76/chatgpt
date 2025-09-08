@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import { FiSidebar } from 'react-icons/fi';
 import ChatSidebar from './ChatSidebar';
 import ChatWindow from './ChatWindow';
@@ -61,12 +62,17 @@ const ChatApp = () => {
     setPreviousChats((prev) => prev.map((c) => (c.id === chatId ? updater(c) : c)));
   };
 
-  const handleNewChat = () => {
+  const handleNewChat = async () => {
     const id = createId();
     const newChat = { id, title: 'New Chat', updatedAt: Date.now(), messages: [] };
     setPreviousChats((prev) => [newChat, ...prev]);
     setCurrentChatId(id);
     setMessages([]);
+    const response = await axios.post("http://localhost:5000/chat", {
+      title: newChat.title,
+    }, { withCredentials: true });
+
+    console.log(response.data);
   };
 
   const handleSelectChat = (id) => {
