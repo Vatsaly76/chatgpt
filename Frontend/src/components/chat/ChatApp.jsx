@@ -1,23 +1,11 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
+import { io } from 'socket.io-client';
 import { FiSidebar } from 'react-icons/fi';
 import ChatSidebar from './ChatSidebar';
 import ChatWindow from './ChatWindow';
 import ChatInput from './ChatInput';
 import { AuthContext } from '../../contexts/AuthContext';
-
-// Simulated AI response function
-const fetchAIResponse = async (message) => {
-  await new Promise((res) => setTimeout(res, 700));
-  const prefixes = [
-    "AI:",
-    "Here's a thought:",
-    "Interesting!",
-    "Let me help:",
-  ];
-  const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
-  return `${prefix} You said: "${message}"`;
-};
 
 const createId = () => Math.random().toString(36).slice(2);
 
@@ -27,11 +15,52 @@ const ChatApp = () => {
   const [messages, setMessages] = useState([]); // current chat messages
   const [input, setInput] = useState(''); // user input
   const { user } = useContext(AuthContext);
+  const [socket, setSocket] = useState(null);
 
   // Additional internal state
   const [currentChatId, setCurrentChatId] = useState(null);
   const [isSending, setIsSending] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  useEffect(() => {
+    if (user) {
+      const newSocket = io("http://localhost:5000", {
+        withCredentials: true,
+      });
+      setSocket(newSocket);
+
+      return () => {
+        newSocket.disconnect();
+      };
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (socket) {
+      const handleAiResponse = (message) => {
+        const aiMsg = {
+          id: createId(),
+          role: 'ai',
+          content: message.content,
+          timestamp: new Date()
+        };
+
+        setMessages((prev) => [...prev, aiMsg]);
+        updateChat(message.chat, (c) => ({
+          ...c,
+          updatedAt: Date.now(),
+          messages: [...(c.messages || []), aiMsg]
+        }));
+        setIsSending(false);
+      };
+
+      socket.on("ai-response", handleAiResponse);
+
+      return () => {
+        socket.off("ai-response", handleAiResponse);
+      };
+    }
+  }, [socket]);
 
   useEffect(() => {
     const getChats = async () => {
@@ -84,7 +113,7 @@ const ChatApp = () => {
         const response = await axios.post("http://localhost:5000/chat", {
           title: text.slice(0, 30) || "New Chat",
         }, { withCredentials: true });
-        
+
         const newChat = response.data.chat;
         setPreviousChats((prev) => [newChat, ...prev]);
         chatId = newChat._id;
@@ -118,26 +147,8 @@ const ChatApp = () => {
     setInput('');
     setIsSending(true);
 
-    try {
-      // Save user message to backend
-      await axios.post(`http://localhost:5000/chat/${chatId}/messages`, userMsg, { withCredentials: true });
-
-      const aiText = await fetchAIResponse(text);
-      const aiMsg = { role: 'ai', content: aiText, timestamp: new Date() };
-
-      // Save AI message to backend
-      await axios.post(`http://localhost:5000/chat/${chatId}/messages`, aiMsg, { withCredentials: true });
-
-      // reflect in both states
-      setMessages((prev) => [...prev, aiMsg]);
-      updateChat(chatId, (c) => ({ ...c, updatedAt: Date.now(), messages: [...(c.messages || []), aiMsg] }));
-    } catch (error) {
-      console.error("Failed to send message", error);
-      const aiMsg = { id: createId(), role: 'ai', content: 'Sorry, something went wrong.', timestamp: Date.now() };
-      setMessages((prev) => [...prev, aiMsg]);
-      updateChat(chatId, (c) => ({ ...c, updatedAt: Date.now(), messages: [...(c.messages || []), aiMsg] }));
-    } finally {
-      setIsSending(false);
+    if (socket) {
+      socket.emit('ai-message', { content: text, chat: chatId });
     }
   };
 
