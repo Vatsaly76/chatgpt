@@ -82,6 +82,89 @@
   --breakpoint-xl: 1200px;
 }
 
+/* Custom Scrollbar Styles */
+/* Webkit browsers (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--text-secondary);
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-primary);
+}
+
+::-webkit-scrollbar-corner {
+  background: var(--bg-secondary);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--text-secondary) transparent;
+}
+
+/* For chat sidebar specifically */
+.chat-sidebar__list {
+  /* Enhanced scrollbar for chat list */
+  scrollbar-width: thin;
+  scrollbar-color: var(--text-muted) transparent;
+}
+
+.chat-sidebar__list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-sidebar__list::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 3px;
+}
+
+.chat-sidebar__list::-webkit-scrollbar-thumb {
+  background: var(--text-muted);
+  border-radius: 3px;
+}
+
+.chat-sidebar__list::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* For chat window messages */
+.chat-window-content {
+  /* Subtle scrollbar for chat messages */
+  scrollbar-width: thin;
+  scrollbar-color: var(--text-muted) transparent;
+}
+
+.chat-window-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-window-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-window-content::-webkit-scrollbar-thumb {
+  background: var(--text-muted);
+  border-radius: 3px;
+  opacity: 0.7;
+}
+
+.chat-window-content::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+  opacity: 1;
+}
+
 /* Dark Theme */
 [data-theme="dark"] {
   --bg-primary: #202123;
@@ -154,6 +237,74 @@ body {
   color: var(--text-primary);
   background-color: var(--bg-primary);
   transition: background-color var(--transition-normal), color var(--transition-normal);
+  
+  /* Ensure custom scrollbar is applied */
+  scrollbar-width: thin;
+  scrollbar-color: var(--text-secondary) transparent;
+  overflow-x: hidden; /* Prevent horizontal scrolling */
+}
+
+/* Enhanced body scrollbar for webkit browsers */
+body::-webkit-scrollbar {
+  width: 8px;
+}
+
+body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+body::-webkit-scrollbar-thumb {
+  background: var(--text-secondary);
+  border-radius: 4px;
+}
+
+body::-webkit-scrollbar-thumb:hover {
+  background: var(--text-primary);
+}
+
+/* Hide scrollbars on mobile devices */
+@media (max-width: 768px) {
+  /* Keep scrollbars but make them thinner on mobile */
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  
+  .chat-sidebar__list::-webkit-scrollbar,
+  .chat-window-content::-webkit-scrollbar {
+    width: 3px;
+  }
+}
+
+/* Smooth scrolling for better UX */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Enhanced scrolling for containers */
+.scrollable-container {
+  scrollbar-width: thin;
+  scrollbar-color: var(--text-muted) transparent;
+}
+
+.scrollable-container::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollable-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollable-container::-webkit-scrollbar-thumb {
+  background: var(--text-muted);
+  border-radius: 3px;
+  opacity: 0.6;
+}
+
+.scrollable-container::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+  opacity: 1;
 }
 
 /* Smooth transitions for theme changes */

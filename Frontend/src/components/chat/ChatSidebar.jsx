@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { VscNewFile } from 'react-icons/vsc';
-import { FiSidebar, FiTrash2, FiMoreVertical, FiLogOut } from 'react-icons/fi';
+import { FiSidebar, FiTrash2, FiLogOut, FiPlus } from 'react-icons/fi';
 import { TbHexagon } from 'react-icons/tb';
 import { AuthContext } from '../../contexts/AuthContext';
 import { useContext } from 'react';
@@ -48,7 +47,7 @@ const ChatSidebar = ({ chats, currentChatId, onSelectChat, onNewChat, onDeleteCh
         </div>
         <div className="chat-sidebar__actions">
           <button className="chat-sidebar__new" onClick={onNewChat} aria-label="Start new chat">
-            <VscNewFile size={20} />
+            <FiPlus size={20} />
           </button>
           <button className="chat-sidebar__toggle" onClick={onToggleSidebar} aria-label="Toggle sidebar">
             <FiSidebar size={20} />
