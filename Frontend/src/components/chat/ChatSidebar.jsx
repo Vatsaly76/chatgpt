@@ -1,12 +1,28 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { VscNewFile } from 'react-icons/vsc';
-import { FiSidebar } from 'react-icons/fi';
+import { FiSidebar, FiTrash2, FiMoreVertical } from 'react-icons/fi';
 import { TbHexagon } from 'react-icons/tb';
 import { AuthContext } from '../../contexts/AuthContext';
 import { useContext } from 'react';
 
-const ChatSidebar = ({ chats, currentChatId, onSelectChat, onNewChat, isSidebarOpen, onToggleSidebar }) => {
+const ChatSidebar = ({ chats, currentChatId, onSelectChat, onNewChat, onDeleteChat, isSidebarOpen, onToggleSidebar }) => {
   const { user } = useContext(AuthContext);
+  const [hoveredChatId, setHoveredChatId] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
+
+  const handleDeleteClick = (e, chatId) => {
+    e.stopPropagation();
+    setShowDeleteConfirm(chatId);
+  };
+
+  const handleConfirmDelete = async (chatId) => {
+    await onDeleteChat(chatId);
+    setShowDeleteConfirm(null);
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteConfirm(null);
+  };
 
   return (
     <aside className={`chat-sidebar ${isSidebarOpen ? 'open' : 'closed'}`} aria-label="Chat history sidebar">
@@ -27,13 +43,49 @@ const ChatSidebar = ({ chats, currentChatId, onSelectChat, onNewChat, isSidebarO
         {chats.length === 0 && <li className="chat-sidebar__empty">No previous chats</li>}
         {chats.map((c) => (
           <li key={c._id}>
-            <button
-              className={`chat-sidebar__item ${currentChatId === c._id ? 'is-active' : ''}`}
-              onClick={() => onSelectChat(c._id)}
-              title={c.title}
-            >
-              <span className="chat-sidebar__item-title">{c.title}</span>
-            </button>
+            {showDeleteConfirm === c._id ? (
+              <div className="chat-sidebar__delete-confirm">
+                <span className="delete-confirm__message">Delete chat?</span>
+                <div className="delete-confirm__actions">
+                  <button 
+                    className="delete-confirm__button delete-confirm__button--confirm"
+                    onClick={() => handleConfirmDelete(c._id)}
+                  >
+                    Delete
+                  </button>
+                  <button 
+                    className="delete-confirm__button delete-confirm__button--cancel"
+                    onClick={handleCancelDelete}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div 
+                className={`chat-sidebar__item-container ${currentChatId === c._id ? 'is-active' : ''}`}
+                onMouseEnter={() => setHoveredChatId(c._id)}
+                onMouseLeave={() => setHoveredChatId(null)}
+              >
+                <button
+                  className="chat-sidebar__item"
+                  onClick={() => onSelectChat(c._id)}
+                  title={c.title}
+                >
+                  <span className="chat-sidebar__item-title">{c.title}</span>
+                </button>
+                {(hoveredChatId === c._id || currentChatId === c._id) && (
+                  <button
+                    className="chat-sidebar__delete"
+                    onClick={(e) => handleDeleteClick(e, c._id)}
+                    aria-label="Delete chat"
+                    title="Delete chat"
+                  >
+                    <FiTrash2 size={16} />
+                  </button>
+                )}
+              </div>
+            )}
           </li>
         ))}
       </ul>

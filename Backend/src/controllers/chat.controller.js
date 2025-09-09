@@ -136,10 +136,36 @@ async function getChatById(req, res) {
     }
 }
 
+async function deleteChat(req, res) {
+    const { chatId } = req.params;
+    const userId = req.user.id;
+
+    try {
+        // First check if the chat exists and belongs to the user
+        const chat = await chatModel.findOne({ _id: chatId, user: userId });
+
+        if (!chat) {
+            return res.status(404).json({ error: "Chat not found or user does not have permission" });
+        }
+
+        // Delete all messages associated with this chat from the messages collection
+        await MessageModel.deleteMany({ chat: chatId });
+
+        // Delete the chat itself
+        await chatModel.findOneAndDelete({ _id: chatId, user: userId });
+
+        res.status(200).json({ message: "Chat deleted successfully", chatId });
+    } catch (error) {
+        console.error('Error deleting chat:', error);
+        res.status(500).json({ error: "Failed to delete chat" });
+    }
+}
+
 module.exports = {
     createChat,
     getChats,
     addMessage,
     updateChat,
-    getChatById
+    getChatById,
+    deleteChat
 };

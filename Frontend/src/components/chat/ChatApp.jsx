@@ -143,6 +143,28 @@ const ChatApp = () => {
     }
   };
 
+  const handleDeleteChat = async (chatId) => {
+    try {
+      // Call the backend API to delete the chat
+      await axios.delete(`http://localhost:5000/chat/${chatId}`, { withCredentials: true });
+      
+      // Remove the chat from the local state
+      setPreviousChats((prev) => prev.filter(chat => chat._id !== chatId));
+      
+      // If this was the current chat, clear it
+      if (currentChatId === chatId) {
+        setCurrentChatId(null);
+        setMessages([]);
+      }
+      
+      console.log('Chat deleted successfully:', chatId);
+    } catch (error) {
+      console.error("Failed to delete chat", error);
+      // You could add a toast notification here for better UX
+      alert('Failed to delete chat. Please try again.');
+    }
+  };
+
   const handleSend = async (text) => {
     let chatId = currentChatId;
     
@@ -204,6 +226,7 @@ const ChatApp = () => {
         currentChatId={currentChatId}
         onSelectChat={handleSelectChat}
         onNewChat={handleNewChat}
+        onDeleteChat={handleDeleteChat}
         isSidebarOpen={isSidebarOpen}
         onToggleSidebar={toggleSidebar}
       />

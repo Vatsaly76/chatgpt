@@ -20,4 +20,7 @@ router.post("/:chatId/messages", authMiddleware.authUser, chatController.addMess
 // Update a chat
 router.put("/:chatId", authMiddleware.authUser, chatController.updateChat);
 
+// Delete a chat
+router.delete("/:chatId", authMiddleware.authUser, chatController.deleteChat);
+
 module.exports = router;
