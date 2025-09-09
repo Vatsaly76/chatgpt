@@ -13,6 +13,7 @@ async function generateAIResponse(content) {
             systemInstruction: "You are Khesari a helpful bhojpuri assistant that helps people find information.",
         }
     })
+    
     return response.text;
 }
 
@@ -24,6 +25,7 @@ async function generateVector(content) {
             outputDimensionality: 768
         }
     })
+    
     return response.embeddings[0].values;
 }
 

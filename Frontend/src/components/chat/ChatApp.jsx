@@ -38,7 +38,6 @@ const ChatApp = () => {
   useEffect(() => {
     if (socket) {
       const handleAiResponse = (message) => {
-        console.log("Received ai-response:", message); // For debugging
         const aiMsg = {
           id: createId(),
           role: 'ai',

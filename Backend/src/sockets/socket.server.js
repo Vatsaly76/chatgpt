@@ -36,7 +36,6 @@ function initSocketServer(httpServer) {
         console.log("New client connected");
 
         socket.on("ai-message", async (message) => {
-
             const [userMessage, vectors] = await Promise.all([
                 MessageModel.create({
                     chat: message.chat,
@@ -47,7 +46,8 @@ function initSocketServer(httpServer) {
                 aiService.generateVector(message.content),
             ]);
 
-            await createMemory({
+            // Create user memory in background (non-blocking)
+            createMemory({
                 messageId: userMessage._id.toString(),
                 vectors: vectors,
                 metadata: {
@@ -55,18 +55,31 @@ function initSocketServer(httpServer) {
                     user: socket.userId,
                     text: message.content
                 }
-            });
+            }).catch(err => console.error('Error creating user memory:', err));
 
-            const [memory, chatHistory] = await Promise.all([
-                queryMemory({
+            // Get chat history immediately (faster than vector search)
+            const chatHistory = await MessageModel.find({
+                chat: message.chat
+            }).sort({ createdAt: 1 });
+            
+            // Try to get memory but with a timeout to prevent blocking
+            let memory = [];
+            try {
+                const memoryPromise = queryMemory({
                     queryVector: vectors,
                     topK: 3,
                     metadata: {}
-                }),
-                MessageModel.find({
-                    chat: message.chat
-                }).sort({ createdAt: 1 })
-            ]);
+                });
+                
+                // Use Promise.race with timeout to prevent blocking
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Vector query timeout')), 2000)
+                );
+                
+                memory = await Promise.race([memoryPromise, timeoutPromise]);
+            } catch (error) {
+                memory = [];
+            }
 
             const stm = chatHistory.map(item => {
                 return {
@@ -75,15 +88,16 @@ function initSocketServer(httpServer) {
                 }
             });
 
-            const ltm = [
+            // Only include memory context if we have it
+            const ltm = memory.length > 0 ? [
                 {
                     role: 'user',
                     parts: [{
                         text: `Here is some relevant information from the chat history that might be useful for your next response: 
-                        ${memory.map(item => item.metadata.text).join("\n")}`
+                        ${memory.map(item => item.metadata?.text || '').join("\n")}`
                     }]
                 }
-            ];
+            ] : [];
 
             const aiResponse = await aiService.generateAIResponse([...ltm, ...stm]);
 
@@ -92,25 +106,28 @@ function initSocketServer(httpServer) {
                 chat: message.chat
             });
 
-            const [aiMessage, responsevector] = await Promise.all([
-                MessageModel.create({
-                    chat: message.chat,
-                    user: socket.userId,
-                    content: aiResponse,
-                    role: 'model'
-                }),
-                aiService.generateVector(aiResponse)
-            ]);
-
-            await createMemory({
-                vectors: responsevector,
-                messageId: aiMessage._id.toString(),
-                metadata: {
-                    chat: message.chat,
-                    user: socket.userId,
-                    text: aiResponse
-                }
+            // Save AI response and create memory in background (non-blocking)
+            const aiMessage = await MessageModel.create({
+                chat: message.chat,
+                user: socket.userId,
+                content: aiResponse,
+                role: 'model'
             });
+            
+            // Generate vector and create memory in background
+            aiService.generateVector(aiResponse)
+                .then(responsevector => {
+                    return createMemory({
+                        vectors: responsevector,
+                        messageId: aiMessage._id.toString(),
+                        metadata: {
+                            chat: message.chat,
+                            user: socket.userId,
+                            text: aiResponse
+                        }
+                    });
+                })
+                .catch(err => console.error('Error creating AI memory:', err));
         });
     });
 

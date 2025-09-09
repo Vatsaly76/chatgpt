@@ -12,6 +12,7 @@ async function createMemory({vectors, metadata, messageId}) {
   if (!messageId) {
     throw new Error('A messageId must be provided to create a memory.');
   }
+  
   await vectorChatGPTIndex.upsert([{
     id: messageId,
     values: vectors,
@@ -19,13 +20,19 @@ async function createMemory({vectors, metadata, messageId}) {
   }]);
 }
 async function queryMemory({queryVector, limit = 5, metadata}) {
-  const data = await vectorChatGPTIndex.query({
-    vector: queryVector,
-    topK: limit,
-    filter: metadata ? { metadata } : undefined,
-    includeMetadata: true
-  });
-  return data.matches;
+  try {
+    const data = await vectorChatGPTIndex.query({
+      vector: queryVector,
+      topK: limit,
+      filter: metadata ? { metadata } : undefined,
+      includeMetadata: true
+    });
+    
+    return data.matches;
+  } catch (error) {
+    console.error('Vector DB query failed:', error.message);
+    return []; // Return empty array if query fails
+  }
 }
 
 module.exports = {
