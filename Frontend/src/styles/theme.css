@@ -405,21 +405,42 @@ html {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--spacing-sm);
-  margin-bottom: var(--spacing-md);
+  /* padding: var(--spacing-md);
+  margin-bottom: var(--spacing-md); */
   flex-shrink: 0;
+  border-bottom: 1px solid var(--border-light);
 }
-.chat-sidebar__title-container {
+.chat-sidebar__brand {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  color: var(--text-primary);
+  justify-content: flex-start;
+}
+
+.sidebar-logo {
+  margin-bottom: 10px;
+  width: 90px;
+  height: 90px;
+  object-fit: contain;
+  border-radius: 8px;
 }
 .chat-sidebar__title { margin: 0; font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); }
 .chat-sidebar__actions {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
+}
+
+.chat-sidebar__section {
+  padding: 0 var(--spacing-sm) var(--spacing-sm);
+}
+
+.chat-sidebar__section-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-secondary);
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 .chat-sidebar__new, .chat-sidebar__toggle {
   background: none;

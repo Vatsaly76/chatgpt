@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { FiSidebar, FiTrash2, FiLogOut, FiPlus } from 'react-icons/fi';
-import { TbHexagon } from 'react-icons/tb';
 import { AuthContext } from '../../contexts/AuthContext';
 import { useContext } from 'react';
 
@@ -42,8 +41,12 @@ const ChatSidebar = ({ chats, currentChatId, onSelectChat, onNewChat, onDeleteCh
   return (
     <aside className={`chat-sidebar ${isSidebarOpen ? 'open' : 'closed'}`} aria-label="Chat history sidebar">
       <div className="chat-sidebar__header">
-        <div className="chat-sidebar__title-container">
-          <TbHexagon size={28} />
+        <div className="chat-sidebar__brand">
+          <img 
+            src="/lexora.png" 
+            alt="Lexora Logo" 
+            className="sidebar-logo"
+          />
         </div>
         <div className="chat-sidebar__actions">
           <button className="chat-sidebar__new" onClick={onNewChat} aria-label="Start new chat">
@@ -53,6 +56,10 @@ const ChatSidebar = ({ chats, currentChatId, onSelectChat, onNewChat, onDeleteCh
             <FiSidebar size={20} />
           </button>
         </div>
+      </div>
+      
+      <div className="chat-sidebar__section">
+        <h3 className="chat-sidebar__section-title">Chat History</h3>
       </div>
       <ul className="chat-sidebar__list">
         {chats.length === 0 && <li className="chat-sidebar__empty">No previous chats</li>}
