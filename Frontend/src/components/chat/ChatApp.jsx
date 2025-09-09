@@ -93,9 +93,32 @@ const ChatApp = () => {
     setPreviousChats((prev) => prev.map((c) => (c._id === chatId ? updater(c) : c)));
   };
 
-  const handleNewChat = () => {
-    setCurrentChatId(null);
-    setMessages([]);
+  const handleNewChat = async () => {
+    console.log('New chat button clicked - creating new chat');
+    
+    try {
+      // Create a new chat on the backend
+      const response = await axios.post("http://localhost:5000/chat", {
+        title: "New Chat",
+      }, { withCredentials: true });
+
+      const newChat = response.data.chat;
+      console.log('New chat created:', newChat);
+      
+      // Add the new chat to the beginning of the chats list
+      setPreviousChats((prev) => [newChat, ...prev]);
+      
+      // Set this as the current chat
+      setCurrentChatId(newChat._id);
+      setMessages([]);
+      
+      console.log('New chat set as current:', newChat._id);
+    } catch (error) {
+      console.error("Failed to create new chat", error);
+      // Fallback to just clearing the current chat if API fails
+      setCurrentChatId(null);
+      setMessages([]);
+    }
   };
 
   const handleSelectChat = async (id) => {
@@ -103,8 +126,17 @@ const ChatApp = () => {
     try {
       const response = await axios.get(`http://localhost:5000/chat/${id}`, { withCredentials: true });
       const fetchedChat = response.data.chat;
-      setMessages(fetchedChat.messages || []);
-      updateChat(id, (c) => ({ ...c, messages: fetchedChat.messages || [] }));
+      
+      // Transform messages to ensure they have proper IDs and structure
+      const transformedMessages = (fetchedChat.messages || []).map((msg) => ({
+        id: msg._id || createId(),
+        role: msg.role,
+        content: msg.content,
+        timestamp: msg.timestamp || msg.createdAt || new Date()
+      }));
+      
+      setMessages(transformedMessages);
+      updateChat(id, (c) => ({ ...c, messages: transformedMessages }));
     } catch (error) {
       console.error("Failed to fetch chat messages", error);
       setMessages([]);
@@ -113,6 +145,8 @@ const ChatApp = () => {
 
   const handleSend = async (text) => {
     let chatId = currentChatId;
+    
+    // Only create a new chat if we don't have a current one
     if (!chatId) {
       try {
         const response = await axios.post("http://localhost:5000/chat", {
@@ -123,7 +157,6 @@ const ChatApp = () => {
         setPreviousChats((prev) => [newChat, ...prev]);
         chatId = newChat._id;
         setCurrentChatId(newChat._id);
-        // No longer clearing messages here, as it's handled by handleNewChat
       } catch (error) {
         console.error("Failed to create new chat", error);
         return;
@@ -137,10 +170,17 @@ const ChatApp = () => {
 
     // update the corresponding chat in history
     updateChat(chatId, (c) => {
-      const newTitle = (c.messages || []).length === 0 ? text.slice(0, 30) || 'New Chat' : c.title;
+      // Update title if this is the first message and the title is still "New Chat"
+      const newTitle = ((c.messages || []).length === 0 && c.title === "New Chat") 
+        ? text.slice(0, 30) || 'New Chat' 
+        : c.title;
+      
+      // Update title on server if it changed
       if (newTitle !== c.title) {
-        axios.put(`http://localhost:5000/chat/${chatId}`, { title: newTitle }, { withCredentials: true });
+        axios.put(`http://localhost:5000/chat/${chatId}`, { title: newTitle }, { withCredentials: true })
+          .catch(error => console.error('Failed to update chat title:', error));
       }
+      
       return {
         ...c,
         title: newTitle,
