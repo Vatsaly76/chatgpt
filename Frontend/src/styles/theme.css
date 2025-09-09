@@ -164,6 +164,61 @@
   background: var(--text-secondary);
   opacity: 1;
 }
+/* react markdown theme */
+.message__text {
+  /* Add your custom styles for React Markdown content here */
+  line-height: 1.5;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
+}
+
+.message__text h1,
+.message__text h2,
+.message__text h3 {
+  font-weight: var(--font-weight-bold);
+  margin: var(--spacing-md) 0 var(--spacing-sm);
+}
+
+.message__text p {
+  margin: var(--spacing-sm) 0;
+}
+
+.message__text blockquote {
+  border-left: 4px solid var(--border-color);
+  padding-left: var(--spacing-md);
+  margin: var(--spacing-sm) 0;
+  color: var(--text-muted);
+}
+
+.message__text ol,
+.message__text ul {
+  margin: var(--spacing-sm) 0;
+  padding-left: var(--spacing-lg);
+  overflow-wrap: break-word;
+}
+
+.message__text li {
+  margin: var(--spacing-xs) 0;
+  word-wrap: break-word;
+}
+
+.message__text code {
+  background: var(--bg-tertiary);
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+.message__text pre {
+  background: var(--bg-tertiary);
+  padding: var(--spacing-sm);
+  border-radius: var(--border-radius-md);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
 
 /* Dark Theme */
 [data-theme="dark"] {
@@ -643,6 +698,8 @@ html {
 .message__content {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-width: 0; /* Allow content to shrink */
 }
 
 .message--user .message__content {
@@ -657,6 +714,8 @@ html {
   max-width: 100%;
   padding: var(--spacing-sm) var(--spacing-md);
   border-radius: var(--border-radius-lg);
+  overflow: hidden;
+  word-wrap: break-word;
 }
 
 .message--ai .message__bubble { 
@@ -665,15 +724,13 @@ html {
 .message--user .message__bubble { 
   background: var(--bg-secondary); 
 }
-.message__text { 
-  margin: 0; 
-  white-space: pre-wrap;
-}
 
 .message__time { 
   color: var(--text-muted); 
   font-size: var(--font-size-sm); 
-  margin-top: var(--spacing-sm); 
+  margin-top: var(--spacing-xs);
+  text-align: right;
+  opacity: 0.7;
 }
 
 .chat-input-container {
