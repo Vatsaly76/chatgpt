@@ -369,9 +369,32 @@ body {
 .user-profile__name {
   font-weight: var(--font-weight-medium);
 }
+.user-profile__plan-container {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
 .user-profile__plan {
   font-size: var(--font-size-sm);
   color: var(--text-secondary);
+}
+.user-profile__logout {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: var(--spacing-xs);
+  border-radius: var(--border-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  opacity: 0.8;
+}
+.user-profile__logout:hover {
+  background: var(--bg-quaternary);
+  color: #ef4444;
+  opacity: 1;
 }
 
 

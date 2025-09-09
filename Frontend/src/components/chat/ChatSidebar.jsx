@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { VscNewFile } from 'react-icons/vsc';
-import { FiSidebar, FiTrash2, FiMoreVertical } from 'react-icons/fi';
+import { FiSidebar, FiTrash2, FiMoreVertical, FiLogOut } from 'react-icons/fi';
 import { TbHexagon } from 'react-icons/tb';
 import { AuthContext } from '../../contexts/AuthContext';
 import { useContext } from 'react';
 
 const ChatSidebar = ({ chats, currentChatId, onSelectChat, onNewChat, onDeleteChat, isSidebarOpen, onToggleSidebar }) => {
-  const { user } = useContext(AuthContext);
+  const { user, logout } = useContext(AuthContext);
   const [hoveredChatId, setHoveredChatId] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
+  const [isFooterHovered, setIsFooterHovered] = useState(false);
 
   const handleDeleteClick = (e, chatId) => {
     e.stopPropagation();
@@ -22,6 +23,21 @@ const ChatSidebar = ({ chats, currentChatId, onSelectChat, onNewChat, onDeleteCh
 
   const handleCancelDelete = () => {
     setShowDeleteConfirm(null);
+  };
+
+  const handleLogout = async () => {
+    try {
+      // Call backend logout to clear HTTP-only cookie
+      await fetch('http://localhost:5000/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      // Clear local storage and update context (this will trigger redirect)
+      logout();
+    }
   };
 
   return (
@@ -89,14 +105,30 @@ const ChatSidebar = ({ chats, currentChatId, onSelectChat, onNewChat, onDeleteCh
           </li>
         ))}
       </ul>
-      <div className="chat-sidebar__footer">
+      <div 
+        className="chat-sidebar__footer"
+        onMouseEnter={() => setIsFooterHovered(true)}
+        onMouseLeave={() => setIsFooterHovered(false)}
+      >
         <div className="user-profile">
           <div className="user-profile__avatar">
             <span>{user?.fullName?.firstName?.[0]?.toUpperCase() || 'U'}</span>
           </div>
           <span className="user-profile__name">{user?.fullName?.firstName || 'User'}</span>
         </div>
-        <span className="user-profile__plan">Free</span>
+        <div className="user-profile__plan-container">
+          <span className="user-profile__plan">Logout</span>
+          {isFooterHovered && (
+            <button 
+              className="user-profile__logout"
+              onClick={handleLogout}
+              aria-label="Logout"
+              title="Logout"
+            >
+              <FiLogOut size={16} />
+            </button>
+          )}
+        </div>
       </div>
     </aside>
   );

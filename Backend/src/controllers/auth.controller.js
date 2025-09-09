@@ -73,7 +73,23 @@ async function loginUser(req, res) {
     }
 };
 
+async function logoutUser(req, res) {
+    try {
+        // Clear the HTTP-only cookie
+        res.clearCookie('token', { 
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax'
+        });
+        
+        res.status(200).json({ message: 'User logged out successfully' });
+    } catch (error) {
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
 module.exports = {
     registerUser,
-    loginUser
+    loginUser,
+    logoutUser
 };
