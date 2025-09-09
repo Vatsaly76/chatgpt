@@ -38,6 +38,7 @@ const ChatApp = () => {
   useEffect(() => {
     if (socket) {
       const handleAiResponse = (message) => {
+        console.log("Received ai-response:", message); // For debugging
         const aiMsg = {
           id: createId(),
           role: 'ai',
@@ -54,10 +55,17 @@ const ChatApp = () => {
         setIsSending(false);
       };
 
+      const handleAiError = (error) => {
+        console.error("Received AI error from server:", error);
+        setIsSending(false);
+      };
+
       socket.on("ai-response", handleAiResponse);
+      socket.on("ai-error", handleAiError);
 
       return () => {
         socket.off("ai-response", handleAiResponse);
+        socket.off("ai-error", handleAiError);
       };
     }
   }, [socket]);
@@ -85,25 +93,22 @@ const ChatApp = () => {
     setPreviousChats((prev) => prev.map((c) => (c._id === chatId ? updater(c) : c)));
   };
 
-  const handleNewChat = async () => {
-    try {
-      const response = await axios.post("http://localhost:5000/chat", {
-        title: "New Chat",
-      }, { withCredentials: true });
-
-      const newChat = response.data.chat;
-      setPreviousChats((prev) => [newChat, ...prev]);
-      setCurrentChatId(newChat._id);
-      setMessages([]);
-    } catch (error) {
-      console.error("Failed to create new chat", error);
-    }
+  const handleNewChat = () => {
+    setCurrentChatId(null);
+    setMessages([]);
   };
 
-  const handleSelectChat = (id) => {
+  const handleSelectChat = async (id) => {
     setCurrentChatId(id);
-    const chat = previousChats.find((c) => c._id === id);
-    setMessages(chat?.messages || []);
+    try {
+      const response = await axios.get(`http://localhost:5000/chat/${id}`, { withCredentials: true });
+      const fetchedChat = response.data.chat;
+      setMessages(fetchedChat.messages || []);
+      updateChat(id, (c) => ({ ...c, messages: fetchedChat.messages || [] }));
+    } catch (error) {
+      console.error("Failed to fetch chat messages", error);
+      setMessages([]);
+    }
   };
 
   const handleSend = async (text) => {
@@ -118,14 +123,14 @@ const ChatApp = () => {
         setPreviousChats((prev) => [newChat, ...prev]);
         chatId = newChat._id;
         setCurrentChatId(newChat._id);
-        setMessages([]);
+        // No longer clearing messages here, as it's handled by handleNewChat
       } catch (error) {
         console.error("Failed to create new chat", error);
         return;
       }
     }
 
-    const userMsg = { role: 'user', content: text, timestamp: new Date() };
+    const userMsg = { id: createId(), role: 'user', content: text, timestamp: new Date() };
 
     // update local messages state (for current chat view)
     setMessages((prev) => [...prev, userMsg]);
