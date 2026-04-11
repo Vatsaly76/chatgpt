@@ -57,6 +57,15 @@ const ChatApp = () => {
       const handleAiError = (error) => {
         console.error("Received AI error from server:", error);
         setIsSending(false);
+
+        const errorMsg = {
+          id: createId(),
+          role: 'ai',
+          content: `⚠️ **Error**: ${error.message || "An unexpected error occurred."}`,
+          timestamp: new Date()
+        };
+
+        setMessages((prev) => [...prev, errorMsg]);
       };
 
       socket.on("ai-response", handleAiResponse);

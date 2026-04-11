@@ -1,14 +1,21 @@
 const { GoogleGenAI } = require("@google/genai");
 
-const ai = new GoogleGenAI({});
+const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+
+if (!apiKey) {
+    throw new Error("Missing Gemini API key. Set GEMINI_API_KEY or GOOGLE_API_KEY.");
+}
+
+const ai = new GoogleGenAI({ apiKey });
 
 async function generateAIResponse(content) {
-    const response = await ai.models.generateContent({
-        model: "gemini-2.0-flash",
-        contents: content,
-        // { 0 < temperature < 2 } 
-        // higher temperature more creative and lower temperature more focused.
-        config: {
+    try {
+        const response = await ai.models.generateContent({
+            model: "gemini-1.5-flash",
+            contents: content,
+            // { 0 < temperature < 2 } 
+            // higher temperature more creative and lower temperature more focused.
+            config: {
   temperature: 0.7,
   systemInstruction: `
 You are a helpful AI assistant created by Vatsaly Shukla.
@@ -44,21 +51,48 @@ Example:
 `
 }
 
-    })
+        })
 
-    return response.text;
+        return response.text;
+    } catch (error) {
+        throw mapGeminiError(error, "generateAIResponse");
+    }
 }
 
 async function generateVector(content) {
-    const response = await ai.models.embedContent({
-        model: "gemini-embedding-001",
-        contents: content,
-        config: {
-            outputDimensionality: 768
-        }
-    })
+    try {
+        const response = await ai.models.embedContent({
+            model: "text-embedding-004",
+            contents: content,
+            config: {
+                outputDimensionality: 768
+            }
+        })
 
-    return response.embeddings[0].values;
+        return response.embeddings[0].values;
+    } catch (error) {
+        throw mapGeminiError(error, "generateVector");
+    }
+}
+
+function mapGeminiError(error, operation) {
+    console.error(`Gemini Error in ${operation}:`, JSON.stringify(error, null, 2));
+    if (error.response) {
+        console.error("Response data:", JSON.stringify(error.response, null, 2));
+    }
+    
+    const isRateLimited = error?.status === 429;
+    const message = isRateLimited
+        ? "AI service is at capacity. Please wait a few seconds and try again."
+        : "AI service is currently unavailable. Please try again later.";
+
+    const wrappedError = new Error(message);
+    wrappedError.code = isRateLimited ? "AI_RATE_LIMIT" : "AI_PROVIDER_ERROR";
+    wrappedError.status = error?.status || 500;
+    wrappedError.operation = operation;
+    wrappedError.cause = error;
+
+    return wrappedError;
 }
 
 module.exports = {

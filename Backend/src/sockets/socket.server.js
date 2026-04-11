@@ -36,98 +36,119 @@ function initSocketServer(httpServer) {
         console.log("New client connected");
 
         socket.on("ai-message", async (message) => {
-            const [userMessage, vectors] = await Promise.all([
-                MessageModel.create({
+            try {
+                if (!message?.content || !message?.chat) {
+                    throw new Error("Invalid AI message payload.");
+                }
+
+                const userMessage = await MessageModel.create({
                     chat: message.chat,
                     user: socket.userId,
                     content: message.content,
                     role: 'user'
-                }),
-                aiService.generateVector(message.content),
-            ]);
-
-            // Create user memory in background (non-blocking)
-            createMemory({
-                messageId: userMessage._id.toString(),
-                vectors: vectors,
-                metadata: {
-                    chat: message.chat,
-                    user: socket.userId,
-                    text: message.content
-                }
-            }).catch(err => console.error('Error creating user memory:', err));
-
-            // Get chat history immediately (faster than vector search)
-            const chatHistory = await MessageModel.find({
-                chat: message.chat
-            }).sort({ createdAt: 1 });
-            
-            // Try to get memory but with a timeout to prevent blocking
-            let memory = [];
-            try {
-                const memoryPromise = queryMemory({
-                    queryVector: vectors,
-                    topK: 3,
-                    metadata: {}
                 });
-                
-                // Use Promise.race with timeout to prevent blocking
-                const timeoutPromise = new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('Vector query timeout')), 2000)
-                );
-                
-                memory = await Promise.race([memoryPromise, timeoutPromise]);
-            } catch (error) {
-                memory = [];
-            }
 
-            const stm = chatHistory.map(item => {
-                return {
-                    role: item.role,
-                    parts: [{ text: item.content }]
+                let vectors = null;
+                try {
+                    vectors = await aiService.generateVector(message.content);
+                } catch (err) {
+                    console.error("Vector generation failed, proceeding without memory:", err.message);
                 }
-            });
 
-            // Only include memory context if we have it
-            const ltm = memory.length > 0 ? [
-                {
-                    role: 'user',
-                    parts: [{
-                        text: `Here is some relevant information from the chat history that might be useful for your next response: 
-                        ${memory.map(item => item.metadata?.text || '').join("\n")}`
-                    }]
-                }
-            ] : [];
-
-            const aiResponse = await aiService.generateAIResponse([...ltm, ...stm]);
-
-            socket.emit("ai-response", {
-                content: aiResponse,
-                chat: message.chat
-            });
-
-            // Save AI response and create memory in background (non-blocking)
-            const aiMessage = await MessageModel.create({
-                chat: message.chat,
-                user: socket.userId,
-                content: aiResponse,
-                role: 'model'
-            });
-            
-            // Generate vector and create memory in background
-            aiService.generateVector(aiResponse)
-                .then(responsevector => {
-                    return createMemory({
-                        vectors: responsevector,
-                        messageId: aiMessage._id.toString(),
+                // Create user memory in background (non-blocking)
+                if (vectors) {
+                    createMemory({
+                        messageId: userMessage._id.toString(),
+                        vectors: vectors,
                         metadata: {
                             chat: message.chat,
                             user: socket.userId,
-                            text: aiResponse
+                            text: message.content
                         }
-                    });
-                })
-                .catch(err => console.error('Error creating AI memory:', err));
+                    }).catch(err => console.error('Error creating user memory:', err));
+                }
+
+                // Get chat history immediately (faster than vector search)
+                const chatHistory = await MessageModel.find({
+                    chat: message.chat
+                }).sort({ createdAt: 1 });
+                
+                // Try to get memory but with a timeout to prevent blocking
+                let memory = [];
+                if (vectors) {
+                    try {
+                        const memoryPromise = queryMemory({
+                            queryVector: vectors,
+                            topK: 3,
+                            metadata: {}
+                        });
+                        
+                        // Use Promise.race with timeout to prevent blocking
+                        const timeoutPromise = new Promise((_, reject) => 
+                            setTimeout(() => reject(new Error('Vector query timeout')), 2000)
+                        );
+                        
+                        memory = await Promise.race([memoryPromise, timeoutPromise]);
+                    } catch (error) {
+                        memory = [];
+                    }
+                }
+
+                const stm = chatHistory.map(item => {
+                    return {
+                        role: item.role,
+                        parts: [{ text: item.content }]
+                    }
+                });
+
+                // Only include memory context if we have it
+                const ltm = memory.length > 0 ? [
+                    {
+                        role: 'user',
+                        parts: [{
+                            text: `Here is some relevant information from the chat history that might be useful for your next response: 
+                            ${memory.map(item => item.metadata?.text || '').join("\n")}`
+                        }]
+                    }
+                ] : [];
+
+                const aiResponse = await aiService.generateAIResponse([...ltm, ...stm]);
+
+                socket.emit("ai-response", {
+                    content: aiResponse,
+                    chat: message.chat
+                });
+
+                // Save AI response and create memory in background (non-blocking)
+                const aiMessage = await MessageModel.create({
+                    chat: message.chat,
+                    user: socket.userId,
+                    content: aiResponse,
+                    role: 'model'
+                });
+                
+                // Generate vector and create memory in background
+                aiService.generateVector(aiResponse)
+                    .then(responsevector => {
+                        return createMemory({
+                            vectors: responsevector,
+                            messageId: aiMessage._id.toString(),
+                            metadata: {
+                                chat: message.chat,
+                                user: socket.userId,
+                                text: aiResponse
+                            }
+                        });
+                    })
+                    .catch(err => console.error('Error creating AI memory:', err));
+            } catch (error) {
+                console.error('Error handling ai-message event:', error);
+                socket.emit("ai-error", {
+                    chat: message?.chat || null,
+                    error: error?.code || 'AI_ERROR',
+                    message: error?.message || 'The AI assistant is temporarily unavailable. Please try again shortly.'
+                });
+            }
         });
     });
 
