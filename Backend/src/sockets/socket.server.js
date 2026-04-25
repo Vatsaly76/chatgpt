@@ -94,7 +94,8 @@ function initSocketServer(httpServer) {
                     }
                 }
 
-                const stm = chatHistory.map(item => {
+                const recentMessages = chatHistory.slice(-12);
+                const stm = recentMessages.map(item => {
                     return {
                         role: item.role,
                         parts: [{ text: item.content }]
