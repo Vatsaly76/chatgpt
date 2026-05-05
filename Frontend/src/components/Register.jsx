@@ -12,7 +12,7 @@ const Register = () => {
   // Redirect to home if user is already logged in
   useEffect(() => {
     if (user) {
-      navigate('/', { replace: true });
+      navigate('/chat', { replace: true });
     }
   }, [user, navigate]);
 

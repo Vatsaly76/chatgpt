@@ -12,7 +12,7 @@ const Login = () => {
   // Redirect to home if user is already logged in
   useEffect(() => {
     if (user) {
-      navigate('/', { replace: true });
+      navigate('/chat', { replace: true });
     }
   }, [user, navigate]);
 
@@ -112,7 +112,7 @@ const Login = () => {
       
       // Redirect after a short delay to show success message
       setTimeout(() => {
-        navigate('/');
+        navigate('/chat');
       }, 1500);
       
     } catch (error) {
