@@ -1,18 +1,22 @@
 const { GoogleGenAI } = require("@google/genai");
-const axios = require("axios");
+const OpenAI = require("openai");
 
 const geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-const mistralApiKey = process.env.MISTRAL_API_KEY || process.env.NVIDIA_API_KEY;
-const requestTimeoutMs = Number(process.env.MISTRAL_TIMEOUT_MS || 90000);
-const responseMaxTokens = Number(process.env.MISTRAL_MAX_TOKENS || 1024);
+const nvidiaApiKey = (process.env.NVIDIA_API_KEY || process.env.MISTRAL_API_KEY || "").replace(/^Bearer\s+/i, "").trim();
+const requestTimeoutMs = Number(process.env.NVIDIA_TIMEOUT_MS || process.env.MISTRAL_TIMEOUT_MS || 90000);
+const responseMaxTokens = Number(process.env.NVIDIA_MAX_TOKENS || process.env.MISTRAL_MAX_TOKENS || 1024);
 
 const ai = geminiApiKey ? new GoogleGenAI({ apiKey: geminiApiKey }) : null;
-const invokeUrl = "https://integrate.api.nvidia.com/v1/chat/completions";
+
+const openai = new OpenAI({
+    apiKey: nvidiaApiKey || "missing-key",
+    baseURL: 'https://integrate.api.nvidia.com/v1',
+});
 
 async function generateAIResponse(content) {
     try {
-        if (!mistralApiKey) {
-            throw new Error("Missing Mistral API key. Set MISTRAL_API_KEY.");
+        if (!nvidiaApiKey) {
+            throw new Error("Missing NVIDIA API key. Set NVIDIA_API_KEY.");
         }
 
         const messages = normalizeMessages(content);
@@ -50,44 +54,48 @@ Example:
 `;
 
         const payload = {
-            model: process.env.MISTRAL_MODEL || "mistralai/mistral-large-3-675b-instruct-2512",
+            model: "google/gemma-2-2b-it",
             messages: buildMistralMessages(messages, systemPrompt),
-            temperature: 0.15,
-            top_p: 1,
+            temperature: 0.2,
+            top_p: 0.7,
             max_tokens: responseMaxTokens,
-            frequency_penalty: 0,
-            presence_penalty: 0,
-            stream: false
+            stream: true
         };
 
-        let response;
+        let responseText = "";
         try {
-            response = await axios.post(invokeUrl, payload, {
-                headers: {
-                    Authorization: normalizeAuthorization(mistralApiKey),
-                    Accept: "application/json"
-                },
+            const completion = await openai.chat.completions.create(payload, {
                 timeout: requestTimeoutMs
             });
+            
+            for await (const chunk of completion) {
+                const content = chunk.choices[0]?.delta?.content || "";
+                process.stdout.write(content);
+                responseText += content;
+            }
+            console.log(); // newline after stream
         } catch (error) {
             if (!isTimeoutError(error)) {
                 throw error;
             }
 
             // Retry once with fewer output tokens to reduce generation latency.
-            response = await axios.post(invokeUrl, {
+            const completion = await openai.chat.completions.create({
                 ...payload,
                 max_tokens: Math.min(responseMaxTokens, 512)
             }, {
-                headers: {
-                    Authorization: normalizeAuthorization(mistralApiKey),
-                    Accept: "application/json"
-                },
                 timeout: requestTimeoutMs
             });
+            
+            for await (const chunk of completion) {
+                const content = chunk.choices[0]?.delta?.content || "";
+                process.stdout.write(content);
+                responseText += content;
+            }
+            console.log();
         }
 
-        return response?.data?.choices?.[0]?.message?.content?.trim() || "";
+        return responseText.trim() || "";
     } catch (error) {
         throw mapAIError(error, "generateAIResponse");
     }
@@ -101,10 +109,7 @@ async function generateVector(content) {
 
         const response = await ai.models.embedContent({
             model: "text-embedding-004",
-            contents: content,
-            config: {
-                outputDimensionality: 768
-            }
+            contents: content
         })
 
         return response.embeddings[0].values;
@@ -146,7 +151,7 @@ function getErrorStatus(error) {
 }
 
 function isTimeoutError(error) {
-    return error?.code === "ECONNABORTED" || /timeout/i.test(error?.message || "");
+    return error?.code === "ECONNABORTED" || error?.name === "APIConnectionTimeoutError" || /timeout/i.test(error?.message || "");
 }
 
 function normalizeAuthorization(apiKey) {
@@ -156,13 +161,27 @@ function normalizeAuthorization(apiKey) {
 }
 
 function buildMistralMessages(messages, systemPrompt) {
-    return [
+    const finalMessages = [
         {
             role: "user",
             content: `Follow these assistant rules for all future replies in this chat:\n\n${systemPrompt}`
         },
-        ...messages
+        {
+            role: "assistant",
+            content: "Understood. I will strictly follow these rules and guidelines for all my responses."
+        }
     ];
+
+    for (const msg of messages) {
+        const lastMsg = finalMessages[finalMessages.length - 1];
+        if (lastMsg.role === msg.role) {
+            lastMsg.content += "\n\n" + msg.content;
+        } else {
+            finalMessages.push({ ...msg });
+        }
+    }
+
+    return finalMessages;
 }
 
 function normalizeMessages(content) {
@@ -170,7 +189,7 @@ function normalizeMessages(content) {
         return [{ role: "user", content: String(content || "") }];
     }
 
-    return content
+    const rawMessages = content
         .map((item) => {
             const isGeminiParts = Array.isArray(item?.parts);
             const mappedRole = item?.role === "model" ? "assistant" : item?.role;
@@ -193,6 +212,19 @@ function normalizeMessages(content) {
             };
         })
         .filter((msg) => msg.content);
+
+    // Merge consecutive messages of the same role to strictly alternate user/assistant
+    const mergedMessages = [];
+    for (const msg of rawMessages) {
+        const lastMsg = mergedMessages[mergedMessages.length - 1];
+        if (lastMsg && lastMsg.role === msg.role) {
+            lastMsg.content += "\n\n" + msg.content;
+        } else {
+            mergedMessages.push({ ...msg });
+        }
+    }
+
+    return mergedMessages;
 }
 
 module.exports = {
